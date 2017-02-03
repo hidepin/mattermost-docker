@@ -8,6 +8,7 @@ services:
         no_proxy: 127.0.0.1
         http_proxy:
         https_proxy:
+    restart: no
     volumes:
       - /opt/docker/mattermost/volumes/db/var/lib/postgresql/data:/var/lib/postgresql/data
       - /etc/localtime:/etc/localtime:ro
@@ -19,6 +20,7 @@ services:
         no_proxy: 127.0.0.1
         http_proxy:
         https_proxy:
+    restart: no
     volumes:
       - /opt/docker/mattermost/volumes/app/mattermost/config:/mattermost/config:rw
       - /opt/docker/mattermost/volumes/app/mattermost/data:/mattermost/data:rw
@@ -32,6 +34,7 @@ services:
         no_proxy: 127.0.0.1
         http_proxy:
         https_proxy:
+    restart: no
     ports:
       - "443:443"
     volumes:
