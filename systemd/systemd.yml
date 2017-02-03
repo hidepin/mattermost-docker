@@ -7,10 +7,10 @@
     service: mattermost.service
 
   tasks:
-    - name: Set Subversion Systemd Service
+    - name: set mattermost systemd service
       template: src="{{ service }}.j2" dest="/etc/systemd/system/{{ service }}"
 
-    - name: Enable Mattermost Systemd Service
+    - name: enable mattermost systemd service
       service: name="{{ service }}" enabled=yes state=started daemon_reload=yes
 
   handlers:
