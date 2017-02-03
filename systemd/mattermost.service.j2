@@ -1,0 +1,13 @@
+[Unit]
+Description=APP Container for Mattermost
+After=docker.service
+Requires=docker.service
+
+[Service]
+TimeoutStartSec=0
+ExecStart=/usr/local/bin/docker-compose -f /opt/docker/mattermost/mattermost-docker/docker-compose.yml -f /opt/docker/mattermost/mattermost-docker/docker-compose.override.yml up
+ExecStop=/usr/local/bin/docker-compose -f /opt/docker/mattermost/mattermost-docker/docker-compose.ymls -f /opt/docker/mattermost/mattermost-docker/docker-compose.override.yml top
+Environment="DOCKER_HOST=tcp://127.0.0.1:2376"
+
+[Install]
+WantedBy=multi-user.target
