@@ -10,8 +10,15 @@ mattermost-docker
     docker-compose build
     ```
 
-2. 起動する
+systemdによる自動起動設定
+============================================================
+host OSにsystemdの自動起動設定を行う
+(ansibleのdocker imageが必要)
 
-    ```
-    docker-compose up -d
-    ```
+1. host OSにログインする
+
+2. dockerからansibleの設定を行う
+
+  ``` shell
+  docker run --rm -it -v $(pwd)/systemd:/playbook hidepin/ansible ansible-playbook systemd.yml
+  ```
