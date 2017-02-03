@@ -12,3 +12,7 @@
 
     - name: Enable Mattermost Systemd Service
       service: name="{{ service }}" enabled=yes state=started daemon_reload=yes
+
+  handlers:
+    - name: mattermost restart
+      service: name=mattermost state=restarted
