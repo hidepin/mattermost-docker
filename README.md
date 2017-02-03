@@ -20,5 +20,5 @@ host OSにsystemdの自動起動設定を行う
 2. dockerからansibleの設定を行う
 
   ``` shell
-  docker run --rm -it -v $(pwd)/systemd:/playbook hidepin/ansible ansible-playbook systemd.yml
+  docker run --rm -it -v $(pwd)/systemd:/playbook hidepin/ansible ansible-playbook -i "(host OSのIPアドレス)," systemd.yml
   ```
