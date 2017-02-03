@@ -1,0 +1,17 @@
+- hosts: all
+  remote_user: root
+
+  vars:
+    service: mattermost.service
+
+  tasks:
+    - name: set mattermost systemd service
+      template: src="{{ service }}.j2" dest="/etc/systemd/system/{{ service }}"
+      notify: mattermost restart
+
+    - name: enable mattermost systemd service
+      service: name="{{ service }}" enabled=yes state=started daemon_reload=yes
+
+  handlers:
+    - name: mattermost restart
+      service: name=mattermost state=restarted
