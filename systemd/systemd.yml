@@ -11,4 +11,4 @@
       template: src="{{ service }}.j2" dest="/etc/systemd/system/{{ service }}"
 
     - name: Enable Mattermost Systemd Service
-      systemd: name="{{ service }}" enabled=yes state=started daemon_reload=yes
+      service: name="{{ service }}" enabled=yes state=started daemon_reload=yes
