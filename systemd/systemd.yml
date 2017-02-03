@@ -1,7 +1,5 @@
 - hosts: all
   remote_user: root
-#  ask_pass: True
-#  host_key_checking: False
 
   vars:
     service: mattermost.service
