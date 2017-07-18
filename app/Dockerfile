@@ -1,18 +1,26 @@
 FROM ubuntu:14.04
 
+# Some ENV variables
 ENV PATH="/mattermost/bin:${PATH}"
+ENV MM_VERSION=4.0.0
 
-RUN apt-get update && apt-get -y install curl netcat
-RUN mkdir -p /mattermost/data
+# Install some needed packages
+RUN apt-get update \
+    && apt-get -y install \
+      curl \
+      jq \
+      netcat \
+    && rm -rf /var/lib/apt/lists/*
 
-ENV MM_VERSION=3.9.0
+# Prepare Mattermost
+RUN mkdir -p /mattermost/data \
+    && curl https://releases.mattermost.com/$MM_VERSION/mattermost-team-$MM_VERSION-linux-amd64.tar.gz | tar -xvz \
+    && cp /mattermost/config/config.json /config.json.save \
+    && rm -rf /mattermost/config/config.json
 
-RUN curl https://releases.mattermost.com/$MM_VERSION/mattermost-team-$MM_VERSION-linux-amd64.tar.gz | tar -xvz
-
-RUN rm /mattermost/config/config.json
-COPY config.template.json /
-
+# Configure entrypoint
 COPY docker-entry.sh /
+# Set permission (TODO should be removed and replace by a chmod on the file in the repository ?)
 RUN chmod +x /docker-entry.sh
 ENTRYPOINT ["/docker-entry.sh"]
 
