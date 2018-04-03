@@ -1,106 +1,140 @@
-mattermost-docker
-============================================================
+# Production Docker deployment for Mattermost
 
-初期設定
-------------------------------------------------------------
+This project enables deployment of a Mattermost server in a multi-node production configuration using Docker.
 
-### HTTPS版
+[![Build Status](https://travis-ci.org/mattermost/mattermost-docker.svg?branch=master)](https://travis-ci.org/mattermost/mattermost-docker)
 
-1. 証明書ディレクトリを作成
+Notes:
+- The default Mattermost edition for this repo has changed from Team Edition to Enterprise Edition. Please see [Choose Edition](#choose-edition-to-install) section.
+- To install this Docker project on AWS Elastic Beanstalk please see [AWS Elastic Beanstalk Guide](contrib/aws/README.md).
+- To run Mattermost on Kubernetes you can start with the [manifest examples in the kubernetes folder](contrib/kubernetes/README.md)
+- To install Mattermost without Docker directly onto a Linux-based operating systems, please see [Admin Guide](https://docs.mattermost.com/guides/administrator.html#installing-mattermost).
 
-  ```
-  mkdir -p /opt/docker/mattermost/volumes/web/cert
-  cd /opt/docker/mattermost/volumes/web/cert
-  ```
+## Installation using Docker Compose
 
-2. 鍵の作成
+The following instructions deploy Mattermost in a production configuration using multi-node Docker Compose set up.
 
-  ```
-  openssl genrsa -aes128 2048 > localhost.key
-  ```
+### Requirements
 
-  ```
-  Generating RSA private key, 2048 bit long modulus
-  ....................+++
-  ................................+++
-  e is 65537 (0x10001)
-  Enter pass phrase: <パスフレーズ>
-  Verifying - Enter pass phrase: <パスフレーズ>
-  ```
+* [docker]
+* [docker-compose]
 
-3. 証明書の作成
+### Choose Edition to Install
 
-  ```
-  openssl req -utf8 -new -key localhost.key -x509 -days 3650 -out cert.pem -set_serial 0
-  ```
+If you want to install Enterprise Edition, you can skip this section.
 
-  ```
-  Enter pass phrase for localhost.key: <パスフレーズ>
-  You are about to be asked to enter information that will be incorporated
-  into your certificate request.
-  What you are about to enter is what is called a Distinguished Name or a DN.
-  There are quite a few fields but you can leave some blank
-  For some fields there will be a default value,
-  If you enter '.', the field will be left blank.
-  -----
-  Country Name (2 letter code) [AU]:JP
-  State or Province Name (full name) [Some-State]: <都道府県名>
-  Locality Name (eg, city) []: <都市名>
-  Organization Name (eg, company) [Internet Widgits Pty Ltd]: <会社名/組織名>
-  Organizational Unit Name (eg, section) []: <部門名>
-  Common Name (e.g. server FQDN or YOUR name) []: <FQDN>
-  Email Address []: <管理者メールアドレス>
-  ```
+To install the Team Edition, comment out the following line in docker-compose.yaml file:
+```
+dockerfile: Dockerfile-enterprise
+```
 
-4. 秘密鍵からパスフレーズの削除
+### Database container
+This repository offer a Docker image for the Mattermost database. It is a customized PostgreSQL image that you should configure with following environment variables :
+* `POSTGRES_USER`: database username
+* `POSTGRES_PASSWORD`: database password
+* `POSTGRES_DB`: database name
 
-  ```
-  openssl rsa -in localhost.key -out key-no-password.pem
-  ```
+#### AWS
+If deploying to AWS, you could also set following variables to enable [Wal-E](https://github.com/wal-e/wal-e) backup to S3 :
+* `AWS_ACCESS_KEY_ID`: AWS access key
+* `AWS_SECRET_ACCESS_KEY`: AWS secret
+* `WALE_S3_PREFIX`: AWS s3 bucket name
+* `AWS_REGION`: AWS region
 
-  ```
-  Enter pass phrase for localhost.key: <パスフレーズ>
-  writing RSA key
-  ```
+All four environment variables are required. It will enable completed WAL segments sent to archive storage (S3). The base backup and clean up can be done through the following command:
+```bash
+# Base backup
+docker exec mattermost-db su - postgres sh -c "/usr/bin/envdir /etc/wal-e.d/env /usr/local/bin/wal-e backup-push /var/lib/postgresql/data"
+# Keep the most recent 7 base backups and remove the old ones
+docker exec mattermost-db su - postgres sh -c "/usr/bin/envdir /etc/wal-e.d/env /usr/local/bin/wal-e delete --confirm retain 7"
+```
+Those tasks can be executed through a cron job or systemd timer.
 
-5. imageを作成する
+### Application container
+Application container run the Mattermost application. You should configure it with following environment variables :
+* `MM_USERNAME`: database username
+* `MM_PASSWORD`: database password
+* `MM_DBNAME`: database name
 
-    ```
-    cd (mattermost-dockerのパス)
-    docker-compose build
-    ```
+If your database use some custom host and port, it is also possible to configure them :
+* `DB_HOST`: database host address
+* `DB_PORT_NUMBER`: database port
 
-### HTTP版
+If you use a Mattermost configuration file on a different location than the default one (`/mattermost/config/config.json`) :
+* `MM_CONFIG`: configuration file location inside the container.
 
-1. 80番待受を有効化し、443待受を無効化する
+If you choose to use MySQL instead of PostgreSQL, you should set a different datasource :
+* `MM_SQLSETTINGS_DATASOURCE` : `"$MM_USERNAME:$MM_PASSWORD@tcp($DB_HOST:$DB_PORT_NUMBER)/$MM_DBNAME?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s"`
 
-  ```
-  sed -i 's/###- "80:80"/- "80:80"/' docker-compose.yml
-  sed -i 's/- "443:443"/###- "443:443"/' docker-compose.yml
-  ```
+### Web server container
+This image is optional, you should not use it you have your own reverse-proxy. It is a simple front Web server for the Mattermost app container.
+* `MATTERMOST_ENABLE_SSL`: whether to enable SSL
+* `PLATFORM_PORT_80_TCP_PORT`: port that Mattermost image is listening on
 
-2. imageを作成する
+#### Install with SSL certificate
+Put your SSL certificate as `./volumes/web/cert/cert.pem` and the private key that has
+no password as `./volumes/web/cert/key-no-password.pem`. If you don't have
+them you may generate a self-signed SSL certificate.
 
-    ```
-    docker-compose build
-    ```
+## Starting/Stopping
 
-systemdによる自動起動設定
-------------------------------------------------------------
-host OSにsystemdの自動起動設定を行う
-(ansibleのdocker imageが必要)
+### Start
+```
+docker-compose start
+```
 
-1. host OSにログインする
+### Stop
+```
+docker-compose stop
+```
 
-2. dockerからansibleの設定を行う
+### Update
 
-  ``` shell
-  docker run --rm -it -v $(pwd)/systemd:/playbook hidepin/ansible ansible-playbook -i "(host OSのIPアドレス)," systemd.yml
-  ```
+Make sure to backup Mattermost data before proceeding.
+```
+docker-compose down
+git pull
+docker-compose build
+docker-compose up -d
+```
 
-参考
-------------------------------------------------------------
+## Removing
 
-### original
+### Remove the containers
+```
+docker-compose stop && docker-compose rm
+```
 
-https://github.com/mattermost/mattermost-docker
+### Remove the data and settings of your Mattermost instance
+```
+sudo rm -rf volumes
+```
+
+## Upgrading to Team Edition 3.0.x from 2.x
+
+You need to migrate your database before upgrading Mattermost to `3.0.x` from
+`2.x`. Run these commands in the latest `mattermost-docker` directory.
+```
+docker-compose rm -f app
+docker-compose build app
+docker-compose run app -upgrade_db_30
+docker-compose up -d
+```
+See the [offical Upgrade Guide](http://docs.mattermost.com/administration/upgrade.html) for more details.
+
+## Known Issues
+
+* Do not modify the Listen Address in Service Settings.
+* Rarely `app` container fails to start because of "connection refused" to
+  database. Workaround: Restart the container.
+
+## More information
+
+If you want to know how to use docker-compose, see [the overview
+page](https://docs.docker.com/compose).
+
+For the server configurations, see [prod-ubuntu.rst] of Mattermost.
+
+[docker]: http://docs.docker.com/engine/installation/
+[docker-compose]: https://docs.docker.com/compose/install/
+[prod-ubuntu.rst]: https://docs.mattermost.com/install/install-ubuntu-1404.html
