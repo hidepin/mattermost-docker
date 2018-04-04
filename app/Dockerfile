@@ -1,18 +1,19 @@
-FROM ubuntu:14.04
+FROM ubuntu:16.04
 
 # Some ENV variables
 ENV PATH="/mattermost/bin:${PATH}"
-ENV MM_VERSION=4.4.1
+ENV MM_VERSION=4.4.5
 
 # Build argument to set Mattermost edition
-ARG edition=entreprise
+ARG edition=enterprise
 
 # Install some needed packages
 RUN apt-get update \
-    && apt-get -y install \
+    && apt-get -y --no-install-recommends install \
       curl \
       jq \
       netcat \
+      ca-certificates \
     && rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*.deb /var/cache/apt/archives/partial/*.deb /var/cache/apt/*.bin
 
 # Get Mattermost
