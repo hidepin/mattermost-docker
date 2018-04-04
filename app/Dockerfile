@@ -2,7 +2,7 @@ FROM ubuntu:16.04
 
 # Some ENV variables
 ENV PATH="/mattermost/bin:${PATH}"
-ENV MM_VERSION=4.5.0
+ENV MM_VERSION=4.6.1
 
 # Build argument to set Mattermost edition
 ARG edition=enterprise
@@ -14,6 +14,7 @@ RUN apt-get update \
       jq \
       netcat \
       ca-certificates \
+      xmlsec1 \
     && rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*.deb /var/cache/apt/archives/partial/*.deb /var/cache/apt/*.bin
 
 # Get Mattermost
@@ -26,7 +27,7 @@ RUN mkdir -p /mattermost/data \
 # Configure entrypoint and command
 COPY entrypoint.sh /
 ENTRYPOINT ["/entrypoint.sh"]
-WORKDIR /mattermost/bin
+WORKDIR /mattermost
 CMD ["platform"]
 
 # Expose port 80 of the container
