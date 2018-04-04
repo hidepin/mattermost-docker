@@ -20,6 +20,8 @@ services:
         no_proxy: 127.0.0.1
         http_proxy:
         https_proxy:
+        edition: team
+
     restart: "no"
     volumes:
       - /opt/docker/mattermost/volumes/app/mattermost/config:/mattermost/config:rw
